@@ -1,7 +1,6 @@
 from random import random
 import sys
 import re
-import bisect
 
 
 
@@ -37,9 +36,9 @@ def RIP(source, destination, graph, path = []):
                         shortest = newpath  
         return shortest
 
-def getGraph():
+def getGraph(branches):
     graph = {}
-    with open ("CustomGraph.txt", "r") as graphFile:  # Opens CustomGraph.txt file
+    with open (f"Graph{branches}.txt", "r") as graphFile:  # Opens CustomGraph.txt file
         currentNode = ""
         fileInput = graphFile.readlines()  # Reads every line of the file
         for line in fileInput:
@@ -59,8 +58,8 @@ def getGraph():
                     graph[currentNode][node[0]] = 1  # If no cost value exists then it defaults to 1
     return graph
 
-def sendPacket(source = "A1", destination = "V1"):
-    path = RIP(source, destination, getGraph())
+def sendPacket(topology, source = "A1", destination = "V1"):
+    path = RIP(source, destination, topology)
     return path
 
 def nodeSample(packet, probability):
@@ -124,25 +123,39 @@ def edgeSampleReconstruction(marked_packets):
 def main():
     p = [0.2, 0.4, 0.5, 0.6, 0.8]
     x = [10, 100, 1000]
-    getGraph()  # Gets the graph from the input file.
-    for prob in p:
-        # for i in range(0,len(x)):
-        #     marked_packets = []
-        #     for j in range(0, x[i]):
-        #         marked_packets.append(nodeSample(sendPacket(),prob)) # Attacker Packets
-        #     marked_packets.append(nodeSample(sendPacket(source = "", destination = ""),prob)) # Normal User packet
-        #     print(f"Node Sample Reconstructed Path with multiplier:= {x[i]}, marking probability:= {prob}")
-        #     print(nodeSampleReconstruction(marked_packets))
+    algorithm = int(input("Select the algorithm you would like to test:\n1. Node Sampling\n2. Edge Sampling\n"))
+    branches = input("Input the number of branches you would like to test with: 3, 4, or 5: ")
+    no_attackers = int(input("Input the number of attackers from 1 - 2: "))
+    x_value = int(input("Input the multiplier for the attackers packet sending: "))
+    prob = float(input("Input the probability of marking: "))
+    no_packets = int(input("How many packets shall the attacker(s) send: "))
 
-        for i in range(0,len(x)):
-            marked_packets = []
-            for j in range(0, x[i]):
-                marked_packets.append(edgeSample(sendPacket(),prob)) # Attacker Packets
-            print(marked_packets)
-            # marked_packets.append(edgeSample(sendPacket(source = "", destination = ""),prob)) # Normal User packet
-            # print(f"Edge Sample Reconstructed Path with multiplier:= {x[i]}, marking probability:= {prob}")
-            # print(edgeSampleReconstruction(marked_packets))
+    topology = getGraph(branches)  # Gets the graph from the input file.
+    marked_packets = []
+
+    attacker_packets_sent = 0
+    while attacker_packets_sent < no_packets:
+        if algorithm == 1:
+            for i in range(0, x_value):
+                marked_packets.append(nodeSample(sendPacket(topology),prob)) # Attacker Packets
+                attacker_packets_sent += 1
+            marked_packets.append(nodeSample(sendPacket(topology, source = "", destination = ""),prob)) # Normal User packet
+            print(f"Node Sample Reconstructed Path with multiplier:= {x_value}, marking probability:= {prob}")
+            print(nodeSampleReconstruction(marked_packets))
+
         
+        elif algorithm == 2:
+            marked_packets = []
+            for i in range(0, x_value):
+                marked_packets.append(edgeSample(sendPacket(topology),prob)) # Attacker Packets
+                attacker_packets_sent += 1
+            print(marked_packets)
+            marked_packets.append(edgeSample(sendPacket(topology, source = "", destination = ""),prob)) # Normal User packet
+            print(f"Edge Sample Reconstructed Path with multiplier:= {x[i]}, marking probability:= {prob}")
+            print(edgeSampleReconstruction(marked_packets))
+        else: 
+            print("Inavlid algorithm selection")
+            break
 
 if __name__ == '__main__':
     main()
